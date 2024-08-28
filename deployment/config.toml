@@ -7,4 +7,4 @@ isser_name = "ci" # your isser name
 basicauth = ["user:$2a$10$etIpH1oxl4Ky5koV2AzyYe42caqi/tvtme/UTwxA7lHlB2loLDOte"] # for Test -- user:pass
 
 server_port = "8888" # proxy server listen port
-token_lifetime = 60 # min
+token_lifetime = 60 # sec
