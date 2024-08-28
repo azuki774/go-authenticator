@@ -36,6 +36,10 @@ type Authenticator interface {
 
 func (s Server) addHandler(r *chi.Mux) {
 	r.Use(middleware.Logger)
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("OK"))
+	})
+
 	r.Get("/auth_jwt_request", func(w http.ResponseWriter, r *http.Request) {
 		ok, err := s.Authenticator.CheckCookieJWT(r)
 		if err != nil {
