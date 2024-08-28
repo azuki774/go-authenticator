@@ -25,6 +25,7 @@ func init() {
 type Server struct {
 	Port          int
 	Authenticator Authenticator
+	CookieLife    int // token_life, cookie: max-age
 }
 
 type Authenticator interface {
@@ -33,14 +34,30 @@ type Authenticator interface {
 	GenerateCookie(life int) (*http.Cookie, error)
 }
 
-func addHandler(r *chi.Mux) {
+func (s Server) addHandler(r *chi.Mux) {
 	r.Use(middleware.Logger)
 	r.Get("/auth_jwt_request", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("auth_jwt_request"))
 	})
 
 	r.Get("/basic_login", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("basic_login"))
+		ok := s.Authenticator.CheckBasicAuth(r)
+		if !ok {
+			w.Header().Add("WWW-Authenticate", `Basic realm="SECRET AREA"`)
+			w.WriteHeader(http.StatusUnauthorized) // 401
+			return
+		}
+
+		// new cookie
+		// Generate Cookie
+		cookie, err := s.Authenticator.GenerateCookie(s.CookieLife)
+		if err != nil {
+			return
+		}
+
+		http.SetCookie(w, cookie)
+		zap.L().Info("generate JWT cookie")
+		return
 	})
 }
 
@@ -50,7 +67,7 @@ func (s Server) Serve() error {
 	defer stop()
 
 	r := chi.NewRouter()
-	addHandler(r)
+	s.addHandler(r)
 
 	srv := http.Server{
 		Addr:    fmt.Sprintf(":%d", s.Port),

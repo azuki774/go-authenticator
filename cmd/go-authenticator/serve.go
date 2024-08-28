@@ -15,7 +15,7 @@ import (
 type ServeConfig struct {
 	Version       int      `toml:"conf-version"`
 	IssuerName    string   `toml:"isser_name"`
-	Port          string   `toml:"server_port"`
+	Port          int      `toml:"server_port"`
 	BasicAuthList []string `toml:"basicauth"`
 	TokenLifeTime int      `toml:"token_lifetime"`
 }
@@ -82,8 +82,9 @@ to quickly create a Cobra application.`,
 		}
 
 		server := server.Server{
-			Port:          8888,
+			Port:          serveConfig.Port,
 			Authenticator: &authenticator,
+			CookieLife:    serveConfig.TokenLifeTime,
 		}
 
 		if err := server.Serve(); err != nil {
