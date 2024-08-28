@@ -11,11 +11,23 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
+	"go.uber.org/zap"
 	"golang.org/x/exp/slog"
 )
 
 type Server struct {
 	Port int
+}
+
+func addHandler(r *chi.Mux) {
+	r.Use(middleware.Logger)
+	r.Get("/auth_jwt_request", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("auth_jwt_request"))
+	})
+
+	r.Get("/basic_login", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("basic_login"))
+	})
 }
 
 func (s Server) Serve() error {
@@ -24,17 +36,14 @@ func (s Server) Serve() error {
 	defer stop()
 
 	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("welcome"))
-	})
+	addHandler(r)
 
 	srv := http.Server{
 		Addr:    fmt.Sprintf(":%d", s.Port),
 		Handler: r,
 	}
 
-	slog.Info("start server", slog.Int("port", s.Port))
+	zap.L().Info("start server", zap.Int("port", s.Port))
 	go srv.ListenAndServe()
 
 	<-ctx.Done()
@@ -45,10 +54,10 @@ func (s Server) Serve() error {
 
 	err := srv.Shutdown(ctx)
 	if err != nil {
-		slog.Error("server shutdown error", slog.String("err", err.Error()))
+		zap.L().Error("server shutdown error", zap.Error(err))
 		return err
 	}
 
-	slog.Info("shutdown server gracefully")
+	zap.L().Info("shutdown server gracefully")
 	return nil
 }

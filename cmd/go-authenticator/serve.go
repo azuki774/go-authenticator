@@ -2,10 +2,43 @@ package cmd
 
 import (
 	"azuki774/go-authenticator/internal/server"
-	"log/slog"
+	"fmt"
+	"os"
+	"strings"
 
+	"github.com/BurntSushi/toml"
 	"github.com/spf13/cobra"
+	"go.uber.org/zap"
 )
+
+type ServeConfig struct {
+	Version       int      `toml:"conf-version"`
+	IssuerName    string   `toml:"isser_name"`
+	Port          string   `toml:"server_port"`
+	BasicAuthList []string `toml:"basicauth"`
+	TokenLifeTime int      `toml:"token_lifetime"`
+}
+
+var serveConfig ServeConfig
+var basicAuthMap map[string]string
+var serveConfigPath string
+
+func configLoad() (err error) {
+	_, err = toml.DecodeFile(serveConfigPath, &serveConfig)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func basicAuthLoad() {
+	basicAuthMap = make(map[string]string)
+	for _, v := range serveConfig.BasicAuthList {
+		userpass := strings.Split(v, ":")
+		basicAuthMap[userpass[0]] = userpass[1]
+	}
+}
 
 // serveCmd represents the serve command
 var serveCmd = &cobra.Command{
@@ -18,9 +51,25 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		slog.Info("serve start")
+		zap.L().Info("serve start")
 
-		server := server.Server{Port: 8080}
+		if err := configLoad(); err != nil {
+			zap.L().Error("config error", zap.Error(err))
+			os.Exit(1)
+		}
+		zap.L().Info("config loaded")
+
+		// get secret
+		secret := os.Getenv("HMAC_SECRET")
+		if secret == "" {
+			zap.L().Error("HMAC_SECRET is not set")
+			return fmt.Errorf("HMAC_SECRET is not set")
+		}
+
+		basicAuthLoad()
+		zap.L().Info("basic auth loaded")
+
+		server := server.Server{Port: 8888}
 		if err := server.Serve(); err != nil {
 			return err
 		}
@@ -40,4 +89,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	serveCmd.Flags().StringVarP(&serveConfigPath, "config", "c", "deployment/config.toml", "config directory")
 }

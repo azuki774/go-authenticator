@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 container_name=go-authenticator
 
-.PHONY: bin build test
+.PHONY: bin build test start
 bin:
 	go build -a -tags "netgo" -installsuffix netgo  -ldflags="-s -w -extldflags \"-static\" \
 	-X main.version=$(git describe --tag --abbrev=0) \
@@ -17,3 +17,6 @@ test:
 	go vet ./...
 	staticcheck ./...
 	go test -v ./...
+
+start:
+	build/bin/go-authenticator serve
