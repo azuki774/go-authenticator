@@ -24,3 +24,62 @@ jobs:
           install-go: false
       - name: Test
         run: make test
+
+  scenario-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+            go-version: 1.22.5
+
+      - name: Build
+        run: make bin
+
+      - name: Running Server
+        run: |
+          nohup build/bin/go-authenticator serve &> server.log &
+          sleep 5s
+        env:
+          HMAC_SECRET: mokomoko
+
+      - name: Scenario 1 (ping)
+        run: |
+          curl -i ${url} | grep "${want}"
+        env:
+          url: "http://localhost:8888/"
+          want: "HTTP/1.1 200 OK"
+
+      - name: Scenario 2 (/basic_login no password)
+        run: |
+          curl -i ${url} | grep "${want}"
+        env:
+          url: "http://localhost:8888/basic_login"
+          want: "HTTP/1.1 401 Unauthorized"
+
+      - name: Scenario 3 (/basic_login OK, save cookie)
+        run: |
+          curl -c cookie.txt -u user:pass -i ${url} | grep "${want}"
+        env:
+          url: "http://localhost:8888/basic_login"
+          want: "HTTP/1.1 200 OK"
+
+      - name: Scenario 4 (/auth_jwt_request NG)
+        run: |
+          curl -i ${url} | grep "${want}"
+        env:
+          url: "http://localhost:8888/auth_jwt_request"
+          want: "HTTP/1.1 401 Unauthorized"
+
+      - name: Scenario 5 (/auth_jwt_request OK, use cookie)
+        run: |
+          curl -b cookie.txt -i ${url} | grep "${want}"
+        env:
+          url: "http://localhost:8888/auth_jwt_request"
+          want: "HTTP/1.1 200 OK"
+
+      - name: Show Server log
+        run: cat server.log
+        if: ${{ ! cancelled() }}
