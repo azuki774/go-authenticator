@@ -54,6 +54,7 @@ func (a *Authenticator) CheckCookieJWT(r *http.Request) (ok bool, err error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Don't forget to validate the alg is what you expect:
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			zap.L().Error("unexpected signing method")
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 
@@ -78,6 +79,7 @@ func (a *Authenticator) CheckCookieJWT(r *http.Request) (ok bool, err error) {
 		return false, err
 	}
 
+	zap.L().Info("check JWT ok")
 	return true, nil
 }
 
@@ -98,6 +100,7 @@ func (a *Authenticator) GenerateCookie(life int) (*http.Cookie, error) {
 		MaxAge: int(life), // life 秒後まで Cookie を保つ
 	}
 
+	zap.L().Info("generate JWT cookie")
 	return cookie, nil
 }
 
