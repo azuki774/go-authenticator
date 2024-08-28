@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"azuki774/go-authenticator/internal/authenticator"
 	"azuki774/go-authenticator/internal/server"
 	"fmt"
 	"os"
@@ -57,7 +58,11 @@ to quickly create a Cobra application.`,
 			zap.L().Error("config error", zap.Error(err))
 			os.Exit(1)
 		}
-		zap.L().Info("config loaded")
+		zap.L().Info("config loaded",
+			zap.Int("config-version", serveConfig.Version),
+			zap.String("issuer", serveConfig.IssuerName),
+			zap.Int("token_lifetime", serveConfig.TokenLifeTime),
+		)
 
 		// get secret
 		secret := os.Getenv("HMAC_SECRET")
@@ -69,7 +74,18 @@ to quickly create a Cobra application.`,
 		basicAuthLoad()
 		zap.L().Info("basic auth loaded")
 
-		server := server.Server{Port: 8888}
+		// set authenticator
+		authenticator := authenticator.Authenticator{
+			BasicAuthMap: basicAuthMap,
+			Issuer:       serveConfig.IssuerName,
+			HmacSecret:   secret,
+		}
+
+		server := server.Server{
+			Port:          8888,
+			Authenticator: &authenticator,
+		}
+
 		if err := server.Serve(); err != nil {
 			return err
 		}

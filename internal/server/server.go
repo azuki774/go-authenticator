@@ -23,7 +23,14 @@ func init() {
 }
 
 type Server struct {
-	Port int
+	Port          int
+	Authenticator Authenticator
+}
+
+type Authenticator interface {
+	CheckBasicAuth(r *http.Request) bool
+	CheckCookieJWT(r *http.Request) (ok bool, err error)
+	GenerateCookie(life int) (*http.Cookie, error)
 }
 
 func addHandler(r *chi.Mux) {

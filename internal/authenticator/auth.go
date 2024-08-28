@@ -89,6 +89,7 @@ func (a *Authenticator) GenerateCookie(life int) (*http.Cookie, error) {
 	// Sign and get the complete encoded token as a string using the secret
 	tokenString, err := token.SignedString([]byte(a.HmacSecret))
 	if err != nil {
+		zap.L().Error("failed to generate JWT access token", zap.Error(err))
 		return nil, fmt.Errorf("failed to generate JWT access token: %w", err)
 	}
 	cookie := &http.Cookie{
