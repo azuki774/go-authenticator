@@ -20,5 +20,4 @@ RUN --mount=type=bind,target=. \
 FROM gcr.io/distroless/base-debian12 AS runner
 ENV TZ=Tokyo/Asia
 COPY --from=builder /bin/go-authenticator /bin/go-authenticator
-CMD ["start"]
-ENTRYPOINT ["/bin/go-authenticator"]
+ENTRYPOINT ["/bin/go-authenticator", "serve"]

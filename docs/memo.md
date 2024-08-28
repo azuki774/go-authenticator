@@ -1,7 +1,7 @@
 ## GET /auth_jwt_request
 
 - CookieからJWT認証を受ける
-- 認証が失敗したら 400 Bad Requestを返す。
+- 認証が失敗したら 401 Unauthorized を返す。
 - 別途、nginx などでログイン画面に誘導する（トークンを取ってきてもらう）。
 
 ## GET /basic_login
