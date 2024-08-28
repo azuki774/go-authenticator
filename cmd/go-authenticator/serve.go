@@ -106,5 +106,5 @@ func init() {
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
 	// serveCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-	serveCmd.Flags().StringVarP(&serveConfigPath, "config", "c", "deployment/config.toml", "config directory")
+	serveCmd.Flags().StringVarP(&serveConfigPath, "config", "c", "deployment/default.toml", "config directory")
 }

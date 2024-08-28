@@ -19,5 +19,10 @@ RUN --mount=type=bind,target=. \
 
 FROM gcr.io/distroless/base-debian12 AS runner
 ENV TZ=Tokyo/Asia
+ARG CONF_FILE_SRC=deployment/default.toml
+
 COPY --from=builder /bin/go-authenticator /bin/go-authenticator
+COPY ${CONF_FILE_SRC} /opt/config.toml
+
+CMD ["-c", "/opt/config.toml"]
 ENTRYPOINT ["/bin/go-authenticator", "serve"]
