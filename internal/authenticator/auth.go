@@ -6,17 +6,12 @@ import (
 	"net/http"
 	"strings"
 
+	"azuki774/go-authenticator/internal/util"
+
 	"github.com/golang-jwt/jwt/v5"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
-
-func init() {
-	// Logger
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-	zap.ReplaceGlobals(logger)
-}
 
 const CookieJWTName = "jwt"
 
@@ -84,6 +79,25 @@ func (a *Authenticator) CheckCookieJWT(r *http.Request) (ok bool, err error) {
 	}
 
 	return true, nil
+}
+
+func (a *Authenticator) GenerateCookie(life int) (*http.Cookie, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"exp": util.NowFunc().Unix() + int64(life),
+		"iss": a.Issuer,
+	})
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString([]byte(a.HmacSecret))
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate JWT access token: %w", err)
+	}
+	cookie := &http.Cookie{
+		Name:   CookieJWTName,
+		Value:  tokenString,
+		MaxAge: int(life), // life 秒後まで Cookie を保つ
+	}
+
+	return cookie, nil
 }
 
 func maskedJwt(tokenString string) string {

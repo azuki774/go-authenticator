@@ -1,11 +1,22 @@
 package authenticator
 
 import (
+	"azuki774/go-authenticator/internal/util"
 	"fmt"
 	"net/http"
+	"reflect"
 	"testing"
+	"time"
+
+	"go.uber.org/zap"
 )
 
+func init() {
+	// Logger
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
+}
 func TestAuthenticator_CheckBasicAuth(t *testing.T) {
 	type fields struct {
 		BasicAuthMap map[string]string
@@ -166,6 +177,64 @@ func TestAuthenticator_CheckCookieJWT(t *testing.T) {
 			}
 			if gotOk != tt.wantOk {
 				t.Errorf("Authenticator.CheckCookieJWT() = %v, want %v", gotOk, tt.wantOk)
+			}
+		})
+	}
+}
+
+func TestAuthenticator_GenerateCookie(t *testing.T) {
+	type fields struct {
+		BasicAuthMap map[string]string
+		Issuer       string
+		HmacSecret   string
+	}
+	type args struct {
+		life int
+	}
+	tests := []struct {
+		name            string
+		fields          fields
+		args            args
+		wantCookieValue string // from *http.Cookie
+		wantErr         bool
+	}{
+		{
+			name: "ok",
+			fields: fields{
+				Issuer:     "testprogram",
+				HmacSecret: "super_sugoi_secret",
+			},
+			args: args{
+				life: 999, // note: testBaseTime = 1721142000
+			},
+			// {"alg":"HS256","typ":"JWT"} -> eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9
+			// {"exp":1721142999,"iss":"testprogram"} -> eyJleHAiOjE3MjExNDI5OTksImlzcyI6InRlc3Rwcm9ncmFtIn0
+			// sign (super_sugoi_secret): eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjExNDI5OTksImlzcyI6InRlc3Rwcm9ncmFtIn0 => MJd9moHsqxrUs3ujOUcwR6AEQNZzbqj8yOudrHfCBpg
+			wantCookieValue: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MjExNDI5OTksImlzcyI6InRlc3Rwcm9ncmFtIn0.MJd9moHsqxrUs3ujOUcwR6AEQNZzbqj8yOudrHfCBpg",
+			wantErr:         false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			const testBaseTime = 1721142000
+			util.NowFunc = func() time.Time { return time.Unix(testBaseTime, 0) }
+
+			a := &Authenticator{
+				BasicAuthMap: tt.fields.BasicAuthMap,
+				Issuer:       tt.fields.Issuer,
+				HmacSecret:   tt.fields.HmacSecret,
+			}
+			got, err := a.GenerateCookie(tt.args.life)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Authenticator.GenerateCookie() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+
+			// token の中身を比較
+			gottoken := got.Value
+
+			if !reflect.DeepEqual(gottoken, tt.wantCookieValue) {
+				t.Errorf("Authenticator.GenerateCookie() = %v, wantCookieValue %v", gottoken, tt.wantCookieValue)
 			}
 		})
 	}
