@@ -15,6 +15,13 @@ import (
 	"golang.org/x/exp/slog"
 )
 
+func init() {
+	// Logger
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
+}
+
 type Server struct {
 	Port int
 }

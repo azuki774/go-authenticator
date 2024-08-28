@@ -3,7 +3,6 @@ package authenticator
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -11,6 +10,13 @@ import (
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func init() {
+	// Logger
+	logger, _ := zap.NewProduction()
+	defer logger.Sync()
+	zap.ReplaceGlobals(logger)
+}
 
 const CookieJWTName = "jwt"
 
@@ -24,6 +30,7 @@ func (a *Authenticator) CheckBasicAuth(r *http.Request) bool {
 	// 認証情報取得
 	reqUser, reqPass, ok := r.BasicAuth()
 	if !ok {
+		zap.L().Warn("not set basicauth", zap.String("user", reqUser))
 		return false
 	}
 	hashPass, ok := a.BasicAuthMap[reqUser] // 正しいパスワードのハッシュを取得
@@ -61,7 +68,7 @@ func (a *Authenticator) CheckCookieJWT(r *http.Request) (ok bool, err error) {
 	if err != nil {
 		// token expired も含む
 		if errors.Is(err, jwt.ErrTokenExpired) {
-			slog.Info("token expired", "jwt", maskedJwt(tokenString))
+			zap.L().Warn("token expired", zap.String("jwt", maskedJwt(tokenString)))
 			return false, nil
 		}
 		return false, err
@@ -69,7 +76,7 @@ func (a *Authenticator) CheckCookieJWT(r *http.Request) (ok bool, err error) {
 
 	if claims, ok := token.Claims.(jwt.MapClaims); ok {
 		if claims["iss"] != a.Issuer {
-			slog.Info("issuer mismatched", "jwt", maskedJwt(tokenString))
+			zap.L().Warn("issuer mismatched", zap.String("jwt", maskedJwt(tokenString)))
 			return false, nil
 		}
 	} else {
