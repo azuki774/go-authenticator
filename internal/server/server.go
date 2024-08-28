@@ -48,7 +48,6 @@ func (s Server) addHandler(r *chi.Mux) {
 		}
 
 		// auth ok
-		return
 	})
 
 	r.Get("/basic_login", func(w http.ResponseWriter, r *http.Request) {
@@ -67,8 +66,7 @@ func (s Server) addHandler(r *chi.Mux) {
 		}
 
 		http.SetCookie(w, cookie)
-		zap.L().Info("generate JWT cookie")
-		return
+		zap.L().Info("set Cookie")
 	})
 }
 
