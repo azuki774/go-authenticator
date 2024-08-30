@@ -26,3 +26,4 @@ go.work.sum
 
 # Binary file
 build/bin/go-authenticator
+memo

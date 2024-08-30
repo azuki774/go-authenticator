@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -75,16 +74,16 @@ func (s Server) addHandler(r *chi.Mux) {
 	})
 
 	r.Get("/login_page", func(w http.ResponseWriter, r *http.Request) {
-		zap.L().Info("redirect to github")
+		url := "https://github.com/login/oauth/authorize?client_id=XXXXXXXXXXXX&scope=user:read" // TODO
+		zap.L().Info(fmt.Sprintf("move to %s", url))
+		http.Redirect(w, r, url, http.StatusFound)
 	})
 
 	r.Get("/callback/github", func(w http.ResponseWriter, r *http.Request) {
 		zap.L().Info("callback done")
-		body, err := io.ReadAll(r.Body)
-		if err != nil {
-			return
-		}
-		fmt.Println(string(body))
+
+		// TODO
+
 		w.Write([]byte("callback done"))
 	})
 }
