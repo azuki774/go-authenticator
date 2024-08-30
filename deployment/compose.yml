@@ -1,0 +1,8 @@
+services:
+  go-authenticator:
+    image: go-authenticator:latest
+    container_name: go-authenticator
+    ports:
+      - "8888:8888"
+    env_file:
+      - .env
