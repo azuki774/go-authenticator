@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/signal"
@@ -71,6 +72,20 @@ func (s Server) addHandler(r *chi.Mux) {
 
 		http.SetCookie(w, cookie)
 		zap.L().Info("set Cookie")
+	})
+
+	r.Get("/login_page", func(w http.ResponseWriter, r *http.Request) {
+		zap.L().Info("redirect to github")
+	})
+
+	r.Get("/callback/github", func(w http.ResponseWriter, r *http.Request) {
+		zap.L().Info("callback done")
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			return
+		}
+		fmt.Println(string(body))
+		w.Write([]byte("callback done"))
 	})
 }
 
