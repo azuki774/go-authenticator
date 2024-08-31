@@ -25,7 +25,8 @@ func init() {
 type Server struct {
 	Port          int
 	Authenticator Authenticator
-	CookieLife    int // token_life, cookie: max-age
+	CookieLife    int    // token_life, cookie: max-age
+	ServerBaseURL string // 認証のリダイレクト後、戻って来るURLを指定  ex. http://localhost:8888/
 }
 
 type Authenticator interface {
@@ -113,8 +114,10 @@ func (s Server) addHandler(r *chi.Mux) {
 
 		http.SetCookie(w, cookie)
 		zap.L().Info("set Cookie")
+
 		// エラーでなければ親ページに返してあげる
-		http.Redirect(w, r, "../../", http.StatusFound)
+		zap.L().Info(fmt.Sprintf("move to %s", s.ServerBaseURL))
+		http.Redirect(w, r, s.ServerBaseURL, http.StatusFound)
 
 		zap.L().Info("callback process done")
 	})

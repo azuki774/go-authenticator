@@ -105,6 +105,7 @@ to quickly create a Cobra application.`,
 			Port:          serveConfig.Port,
 			Authenticator: &authenticator,
 			CookieLife:    serveConfig.TokenLifeTime,
+			ServerBaseURL: os.Getenv("SERVER_BASEURL"),
 		}
 
 		if err := server.Serve(); err != nil {
