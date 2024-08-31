@@ -98,9 +98,11 @@ func (a *Authenticator) GenerateCookie(life int) (*http.Cookie, error) {
 		return nil, fmt.Errorf("failed to generate JWT access token: %w", err)
 	}
 	cookie := &http.Cookie{
-		Name:   CookieJWTName,
-		Value:  tokenString,
-		MaxAge: int(life), // life 秒後まで Cookie を保つ
+		Name:     CookieJWTName,
+		Value:    tokenString,
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   int(life), // life 秒後まで Cookie を保つ
 	}
 
 	zap.L().Info("generate JWT cookie")
