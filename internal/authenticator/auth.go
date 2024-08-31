@@ -20,7 +20,8 @@ type Authenticator struct {
 	Issuer       string
 	HmacSecret   string
 
-	ClientGitHub ClientGitHub
+	AllowGitHubList map[int]bool
+	ClientGitHub    ClientGitHub
 }
 
 func (a *Authenticator) CheckBasicAuth(r *http.Request) bool {
