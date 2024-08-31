@@ -115,9 +115,9 @@ func (s Server) addHandler(r *chi.Mux) {
 		http.SetCookie(w, cookie)
 		zap.L().Info("set Cookie")
 
-		// TODO: エラーでなければ親ページに返してあげる
-		// zap.L().Info(fmt.Sprintf("move to %s", s.ServerBaseURL))
-		// http.Redirect(w, r, s.ServerBaseURL, http.StatusFound)
+		// エラーでなければ親ページに返してあげる
+		zap.L().Info(fmt.Sprintf("move to %s", s.ServerBaseURL))
+		http.Redirect(w, r, s.ServerBaseURL, http.StatusFound)
 
 		zap.L().Info("callback process done")
 	})
