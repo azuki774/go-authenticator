@@ -1,7 +1,12 @@
 package client
 
 import (
-	"fmt"
+	"azuki774/go-authenticator/internal/model"
+	"bytes"
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
 	"os"
 
 	"golang.org/x/oauth2"
@@ -9,7 +14,7 @@ import (
 )
 
 type ClientGitHub struct {
-	Conf *oauth2.Config
+	AuthConf *oauth2.Config
 }
 
 func NewClientGitHubConf() *ClientGitHub {
@@ -23,10 +28,50 @@ func NewClientGitHubConf() *ClientGitHub {
 		},
 	}
 
-	return &ClientGitHub{Conf: conf}
+	return &ClientGitHub{AuthConf: conf}
 }
 
-func (c *ClientGitHub) GetLoginPageURL() string {
-	url := fmt.Sprintf("%s?client_id=%s&scope=%s", c.Conf.AuthCodeURL, c.Conf.ClientID, c.Conf.Scopes[0])
-	return url
+func (c *ClientGitHub) GetAccessToken(ctx context.Context, code string) (res model.TokenResponse, err error) {
+	reqData := model.TokenRequest{
+		ClientID:     c.AuthConf.ClientID,
+		ClientSecret: c.AuthConf.ClientSecret,
+		Code:         code,
+	}
+
+	reqDataBin, err := json.Marshal(&reqData)
+	if err != nil {
+		return model.TokenResponse{}, err
+	}
+
+	req, err := http.NewRequest(
+		"POST",
+		c.AuthConf.Endpoint.TokenURL,
+		bytes.NewBuffer(reqDataBin),
+	)
+	if err != nil {
+		return model.TokenResponse{}, err
+	}
+
+	// Content-Type 設定
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return model.TokenResponse{}, err
+	}
+	defer resp.Body.Close()
+
+	respBin, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return model.TokenResponse{}, err
+	}
+
+	err = json.Unmarshal(respBin, &res)
+	if err != nil {
+		return model.TokenResponse{}, err
+	}
+
+	return res, nil
 }
