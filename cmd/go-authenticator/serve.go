@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"azuki774/go-authenticator/internal/authenticator"
+	"azuki774/go-authenticator/internal/client"
 	"azuki774/go-authenticator/internal/server"
 	"fmt"
 	"os"
@@ -13,15 +14,17 @@ import (
 )
 
 type ServeConfig struct {
-	Version       int      `toml:"conf-version"`
-	IssuerName    string   `toml:"isser_name"`
-	Port          int      `toml:"server_port"`
-	BasicAuthList []string `toml:"basicauth"`
-	TokenLifeTime int      `toml:"token_lifetime"`
+	Version           int      `toml:"conf-version"`
+	IssuerName        string   `toml:"isser_name"`
+	Port              int      `toml:"server_port"`
+	BasicAuthList     []string `toml:"basicauth"`
+	TokenLifeTime     int      `toml:"token_lifetime"`
+	GitHubAllowIDList []int    `toml:"github_allow_id"`
 }
 
 var serveConfig ServeConfig
 var basicAuthMap map[string]string
+var allowGitHubList map[int]bool
 var serveConfigPath string
 
 func configLoad() (err error) {
@@ -38,6 +41,13 @@ func basicAuthLoad() {
 	for _, v := range serveConfig.BasicAuthList {
 		userpass := strings.Split(v, ":")
 		basicAuthMap[userpass[0]] = userpass[1]
+	}
+}
+
+func allowGitHubListload() {
+	allowGitHubList = make(map[int]bool)
+	for _, v := range serveConfig.GitHubAllowIDList {
+		allowGitHubList[v] = true
 	}
 }
 
@@ -62,6 +72,7 @@ to quickly create a Cobra application.`,
 			zap.Int("config-version", serveConfig.Version),
 			zap.String("issuer", serveConfig.IssuerName),
 			zap.Int("token_lifetime", serveConfig.TokenLifeTime),
+			zap.Ints("github allow list", serveConfig.GitHubAllowIDList),
 		)
 
 		// get secret
@@ -74,17 +85,27 @@ to quickly create a Cobra application.`,
 		basicAuthLoad()
 		zap.L().Info("basic auth loaded")
 
+		allowGitHubListload()
+		zap.L().Info("allow github list loaded")
+
+		// set github client
+		ghClient := client.NewClientGitHub()
+
 		// set authenticator
 		authenticator := authenticator.Authenticator{
 			BasicAuthMap: basicAuthMap,
 			Issuer:       serveConfig.IssuerName,
 			HmacSecret:   secret,
+
+			AllowGitHubList: allowGitHubList,
+			ClientGitHub:    ghClient,
 		}
 
 		server := server.Server{
 			Port:          serveConfig.Port,
 			Authenticator: &authenticator,
 			CookieLife:    serveConfig.TokenLifeTime,
+			ServerBaseURL: os.Getenv("SERVER_BASEURL"),
 		}
 
 		if err := server.Serve(); err != nil {

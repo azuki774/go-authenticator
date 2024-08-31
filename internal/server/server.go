@@ -25,13 +25,16 @@ func init() {
 type Server struct {
 	Port          int
 	Authenticator Authenticator
-	CookieLife    int // token_life, cookie: max-age
+	CookieLife    int    // token_life, cookie: max-age
+	ServerBaseURL string // 認証のリダイレクト後、戻って来るURLを指定  ex. http://localhost:8888/
 }
 
 type Authenticator interface {
 	CheckBasicAuth(r *http.Request) bool
 	CheckCookieJWT(r *http.Request) (ok bool, err error)
 	GenerateCookie(life int) (*http.Cookie, error)
+	// GitHub OAuth2 で access_token 引き換え code 入力から、JWT発行してよいかどうかを判断するところまで
+	HandlingGitHubOAuth(ctx context.Context, code string) (ok bool, err error)
 }
 
 func (s Server) addHandler(r *chi.Mux) {
@@ -71,6 +74,52 @@ func (s Server) addHandler(r *chi.Mux) {
 
 		http.SetCookie(w, cookie)
 		zap.L().Info("set Cookie")
+	})
+
+	r.Get("/login_page", func(w http.ResponseWriter, r *http.Request) {
+		clientId := os.Getenv("GITHUB_CLIENT_ID") // TODO
+		url := fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&scope=user:read", clientId)
+		zap.L().Info(fmt.Sprintf("move to %s", url))
+		http.Redirect(w, r, url, http.StatusFound)
+	})
+
+	r.Get("/callback/github", func(w http.ResponseWriter, r *http.Request) {
+		zap.L().Info("callback received")
+
+		queryParams := r.URL.Query()
+		code := queryParams.Get("code")
+		if code == "" {
+			zap.L().Warn("code is empty")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		ok, err := s.Authenticator.HandlingGitHubOAuth(r.Context(), code)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		if !ok {
+			zap.L().Warn("this user is not authorized")
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		// ここまで問題なければ JWT トークンを発行
+		cookie, err := s.Authenticator.GenerateCookie(s.CookieLife)
+		if err != nil {
+			return
+		}
+
+		http.SetCookie(w, cookie)
+		zap.L().Info("set Cookie")
+
+		// エラーでなければ親ページに返してあげる
+		zap.L().Info(fmt.Sprintf("move to %s", s.ServerBaseURL))
+		http.Redirect(w, r, s.ServerBaseURL, http.StatusFound)
+
+		zap.L().Info("callback process done")
 	})
 }
 

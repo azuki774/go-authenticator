@@ -1,7 +1,7 @@
 SHELL=/bin/bash
 container_name=go-authenticator
 
-.PHONY: bin build test start
+.PHONY: bin build test start stop
 bin:
 	go build -a -tags "netgo" -installsuffix netgo  -ldflags="-s -w -extldflags \"-static\" \
 	-X main.version=$(git describe --tag --abbrev=0) \
@@ -19,4 +19,7 @@ test:
 	go test -v ./...
 
 start:
-	build/bin/go-authenticator serve
+	docker compose -f deployment/compose.yml up -d
+
+stop:
+	docker compose -f deployment/compose.yml down

@@ -6,3 +6,9 @@
 
 ## GET /basic_login
 - Basic認証を受け付け、認証があっていればJWTトークンをCookieで返す。
+
+## GET /login_page
+- ログイン方法を選択
+
+## GET /callback/github?code={code}
+- githubログイン後の oauth2 callback 先

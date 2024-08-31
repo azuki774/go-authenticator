@@ -8,3 +8,6 @@ basicauth = ["user:$2a$10$etIpH1oxl4Ky5koV2AzyYe42caqi/tvtme/UTwxA7lHlB2loLDOte"
 
 server_port = 8888 # proxy server listen port
 token_lifetime = 300 # sec
+
+# github allow ID list
+github_allow_id = [ 50764643 ]
