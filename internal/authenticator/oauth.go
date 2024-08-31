@@ -3,7 +3,6 @@ package authenticator
 import (
 	"azuki774/go-authenticator/internal/model"
 	"context"
-	"fmt"
 
 	"go.uber.org/zap"
 )
@@ -22,7 +21,6 @@ func (a *Authenticator) HandlingGitHubOAuth(ctx context.Context, code string) (b
 	}
 
 	accessToken := accessInfo.AccessToken
-	fmt.Println(accessInfo)
 	zap.L().Error("fetch access_token from code", zap.Error(err))
 
 	// access_tokenからユーザーを取得
@@ -31,7 +29,6 @@ func (a *Authenticator) HandlingGitHubOAuth(ctx context.Context, code string) (b
 		zap.L().Error("failed to get userid", zap.Error(err))
 		return false, err
 	}
-	fmt.Println(user)
 	id := user.ID // user API のレスポンスから ID を抽出
 
 	// 登録済ユーザか判断
