@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -13,11 +14,13 @@ import (
 	"golang.org/x/oauth2/endpoints"
 )
 
+const githubAPIUserEndpoint = "https://api.github.com/user"
+
 type ClientGitHub struct {
 	AuthConf *oauth2.Config
 }
 
-func NewClientGitHubConf() *ClientGitHub {
+func NewClientGitHub() *ClientGitHub {
 	conf := &oauth2.Config{
 		ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 		ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
@@ -74,4 +77,34 @@ func (c *ClientGitHub) GetAccessToken(ctx context.Context, code string) (res mod
 	}
 
 	return res, nil
+}
+
+func (c *ClientGitHub) GetUser(ctx context.Context, accessToken string) (user model.GitHubUser, err error) {
+	req, err := http.NewRequest(
+		"GET",
+		githubAPIUserEndpoint,
+		nil,
+	)
+
+	// Content-Type 設定
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	req.Header.Set("Accept", "application/vnd.github+json")
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return model.GitHubUser{}, err
+	}
+	defer resp.Body.Close()
+
+	respBin, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return model.GitHubUser{}, err
+	}
+
+	err = json.Unmarshal(respBin, &user)
+	if err != nil {
+		return model.GitHubUser{}, err
+	}
+	return user, nil
 }
