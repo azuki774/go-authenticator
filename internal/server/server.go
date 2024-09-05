@@ -9,8 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 	"golang.org/x/exp/slog"
 )
@@ -38,7 +37,6 @@ type Authenticator interface {
 }
 
 func (s Server) addHandler(r *chi.Mux) {
-	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
