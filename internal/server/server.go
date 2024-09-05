@@ -11,7 +11,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slog"
 )
 
 func init() {
@@ -146,7 +145,7 @@ func (s Server) Serve() error {
 	go srv.ListenAndServe()
 
 	<-ctx.Done()
-	slog.Info("shutdown signal detected")
+	zap.L().Info("shutdown signal detected")
 	// 5sec timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
