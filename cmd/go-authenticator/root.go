@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -31,6 +34,27 @@ func Execute() {
 	}
 }
 
+func JSTTimeEncoder(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
+	const layout = "2006-01-02T15:04:05+09:00"
+	jst := time.FixedZone("Asia/Tokyo", 9*60*60)
+	enc.AppendString(t.In(jst).Format(layout))
+}
+
+func newLogger() *zap.Logger {
+	config := zap.NewProductionConfig()
+	// config.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	config.EncoderConfig.EncodeTime = JSTTimeEncoder
+	l, err := config.Build()
+
+	l.WithOptions(zap.AddStacktrace(zap.ErrorLevel))
+	if err != nil {
+		fmt.Printf("failed to create logger: %v\n", err)
+		os.Exit(1)
+	}
+
+	return l
+}
+
 func init() {
 	// Here you will define your flags and configuration settings.
 	// Cobra supports persistent flags, which, if defined here,
@@ -43,7 +67,7 @@ func init() {
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 
 	// Logger
-	logger, _ := zap.NewProduction()
+	logger := newLogger()
 	defer logger.Sync()
 	zap.ReplaceGlobals(logger)
 }

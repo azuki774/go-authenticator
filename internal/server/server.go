@@ -9,18 +9,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
-	"golang.org/x/exp/slog"
 )
-
-func init() {
-	// Logger
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-	zap.ReplaceGlobals(logger)
-}
 
 type Server struct {
 	Port          int
@@ -38,7 +29,6 @@ type Authenticator interface {
 }
 
 func (s Server) addHandler(r *chi.Mux) {
-	r.Use(middleware.Logger)
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
@@ -129,6 +119,8 @@ func (s Server) Serve() error {
 	defer stop()
 
 	r := chi.NewRouter()
+	r.Use(s.publishAuthReqID)
+	r.Use(s.middlewareLogging)
 	s.addHandler(r)
 
 	srv := http.Server{
@@ -140,7 +132,7 @@ func (s Server) Serve() error {
 	go srv.ListenAndServe()
 
 	<-ctx.Done()
-	slog.Info("shutdown signal detected")
+	zap.L().Info("shutdown signal detected")
 	// 5sec timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
