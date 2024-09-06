@@ -13,13 +13,6 @@ import (
 	"go.uber.org/zap"
 )
 
-func init() {
-	// Logger
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
-	zap.ReplaceGlobals(logger)
-}
-
 type Server struct {
 	Port          int
 	Authenticator Authenticator
@@ -120,19 +113,13 @@ func (s Server) addHandler(r *chi.Mux) {
 	})
 }
 
-func (s *Server) middlewareLogging(h http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		zap.L().Info("access", zap.String("url", r.URL.Path))
-		h.ServeHTTP(w, r)
-	})
-}
-
 func (s Server) Serve() error {
 	// signal handler for SIGTERM, INTERRUPT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, os.Interrupt)
 	defer stop()
 
 	r := chi.NewRouter()
+	r.Use(s.publishAuthReqID)
 	r.Use(s.middlewareLogging)
 	s.addHandler(r)
 
