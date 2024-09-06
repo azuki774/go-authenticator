@@ -16,7 +16,12 @@ func (s *Server) middlewareLogging(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v := r.Context().Value(authReqIdKey)
 		authReqId, _ := v.(string)
-		zap.L().Info("access", zap.String("url", r.URL.Path), zap.String("authRequestId", authReqId))
+		zap.L().Info("access",
+			zap.String("url", r.URL.Path),
+			zap.String("User-Agent", r.UserAgent()),
+			zap.String("Remote-Addr", r.RemoteAddr),
+			zap.String("authRequestId", authReqId),
+		)
 		h.ServeHTTP(w, r)
 	})
 }
