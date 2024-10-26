@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -27,11 +26,6 @@ type Authenticator interface {
 	GenerateCookie(life int) (*http.Cookie, error)
 	// GitHub OAuth2 で access_token 引き換え code 入力から、JWT発行してよいかどうかを判断するところまで
 	HandlingGitHubOAuth(ctx context.Context, code string) (ok bool, err error)
-}
-
-// https://hoge.example.com/callback/github -> https://hoge.example.com/
-func (s Server) getServerBaseURL(r *url.URL) string {
-	return r.Scheme + "://" + r.Host + s.BasePath
 }
 
 func (s Server) addHandler(r *chi.Mux) {
@@ -112,8 +106,8 @@ func (s Server) addHandler(r *chi.Mux) {
 		zap.L().Info("set Cookie")
 
 		// エラーでなければ親ページに返してあげる
-		zap.L().Info(fmt.Sprintf("move to %s", s.getServerBaseURL(r.URL)))
-		http.Redirect(w, r, s.getServerBaseURL(r.URL), http.StatusFound)
+		zap.L().Info(fmt.Sprintf("move to %s", s.BasePath))
+		http.Redirect(w, r, s.BasePath, http.StatusFound)
 
 		zap.L().Info("callback process done")
 	})
