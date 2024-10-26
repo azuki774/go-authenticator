@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -13,6 +12,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 )
+
+const XCallBackHeader = "X-Callback-URL"
+const githubOAuthauthorizeURL = "https://github.com/login/oauth/authorize"
 
 type Server struct {
 	Port          int
@@ -27,11 +29,6 @@ type Authenticator interface {
 	GenerateCookie(life int) (*http.Cookie, error)
 	// GitHub OAuth2 で access_token 引き換え code 入力から、JWT発行してよいかどうかを判断するところまで
 	HandlingGitHubOAuth(ctx context.Context, code string) (ok bool, err error)
-}
-
-// https://hoge.example.com/callback/github -> https://hoge.example.com/
-func (s Server) getServerBaseURL(r *url.URL) string {
-	return r.Scheme + "://" + r.Host + s.BasePath
 }
 
 func (s Server) addHandler(r *chi.Mux) {
@@ -73,9 +70,18 @@ func (s Server) addHandler(r *chi.Mux) {
 	})
 
 	r.Get("/login_page", func(w http.ResponseWriter, r *http.Request) {
-		clientId := os.Getenv("GITHUB_CLIENT_ID") // TODO
-		url := fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&scope=user:read", clientId)
+		clientId := os.Getenv("GITHUB_CLIENT_ID")    // TODO
+		redirectURL := r.Header.Get(XCallBackHeader) // 指定するコールバック先のURL
+		var url string
+		if redirectURL != "" {
+			// コールバック先明示
+			url = fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&scope=user:read", githubOAuthauthorizeURL, clientId, redirectURL)
+		} else {
+			url = fmt.Sprintf("%s?client_id=%s&scope=user:read", githubOAuthauthorizeURL, clientId)
+		}
+
 		zap.L().Info(fmt.Sprintf("move to %s", url))
+		zap.L().Info(fmt.Sprintf("redirect_uri is %s", redirectURL))
 		http.Redirect(w, r, url, http.StatusFound)
 	})
 
@@ -112,8 +118,8 @@ func (s Server) addHandler(r *chi.Mux) {
 		zap.L().Info("set Cookie")
 
 		// エラーでなければ親ページに返してあげる
-		zap.L().Info(fmt.Sprintf("move to %s", s.getServerBaseURL(r.URL)))
-		http.Redirect(w, r, s.getServerBaseURL(r.URL), http.StatusFound)
+		zap.L().Info(fmt.Sprintf("move to %s", s.BasePath))
+		http.Redirect(w, r, s.BasePath, http.StatusFound)
 
 		zap.L().Info("callback process done")
 	})
