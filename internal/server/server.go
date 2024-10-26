@@ -13,11 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
+const XCallBackHeader = "X-Callback-URL"
+const githubOAuthauthorizeURL = "https://github.com/login/oauth/authorize"
+
 type Server struct {
 	Port          int
 	Authenticator Authenticator
 	CookieLife    int    // token_life, cookie: max-age
-	ServerBaseURL string // 認証のリダイレクト後、戻って来るURLを指定  ex. http://localhost:8888/
+	BasePath      string // BasePath for redirect_url
 }
 
 type Authenticator interface {
@@ -67,9 +70,18 @@ func (s Server) addHandler(r *chi.Mux) {
 	})
 
 	r.Get("/login_page", func(w http.ResponseWriter, r *http.Request) {
-		clientId := os.Getenv("GITHUB_CLIENT_ID") // TODO
-		url := fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&scope=user:read", clientId)
+		clientId := os.Getenv("GITHUB_CLIENT_ID")    // TODO
+		redirectURL := r.Header.Get(XCallBackHeader) // 指定するコールバック先のURL
+		var url string
+		if redirectURL != "" {
+			// コールバック先明示
+			url = fmt.Sprintf("%s?client_id=%s&redirect_uri=%s&scope=user:read", githubOAuthauthorizeURL, clientId, redirectURL)
+		} else {
+			url = fmt.Sprintf("%s?client_id=%s&scope=user:read", githubOAuthauthorizeURL, clientId)
+		}
+
 		zap.L().Info(fmt.Sprintf("move to %s", url))
+		zap.L().Info(fmt.Sprintf("redirect_uri is %s", redirectURL))
 		http.Redirect(w, r, url, http.StatusFound)
 	})
 
@@ -106,8 +118,8 @@ func (s Server) addHandler(r *chi.Mux) {
 		zap.L().Info("set Cookie")
 
 		// エラーでなければ親ページに返してあげる
-		zap.L().Info(fmt.Sprintf("move to %s", s.ServerBaseURL))
-		http.Redirect(w, r, s.ServerBaseURL, http.StatusFound)
+		zap.L().Info(fmt.Sprintf("move to %s", s.BasePath))
+		http.Redirect(w, r, s.BasePath, http.StatusFound)
 
 		zap.L().Info("callback process done")
 	})
